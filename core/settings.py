@@ -41,7 +41,14 @@ INSTALLED_APPS = [
     'django_rq',
     'rest_framework',
     'corsheaders',
+    'auth_app',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
