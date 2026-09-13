@@ -56,3 +56,21 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError(GENERIC_ERROR)
         attrs['user'] = user
         return attrs
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    """Takes only the address; whether it exists is deliberately not revealed."""
+
+    email = serializers.EmailField()
+
+
+class PasswordConfirmSerializer(serializers.Serializer):
+    """Validates the two password fields that the reset form sends."""
+
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError(GENERIC_ERROR)
+        return attrs

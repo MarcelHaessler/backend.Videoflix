@@ -10,24 +10,40 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-def build_activation_link(user):
-    """Builds the link for the mail; it points at the frontend page, not at this API."""
+def build_frontend_link(user, page):
+    """Both mails link to the frontend, which then calls this API with uid and token."""
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
-    return f'{settings.FRONTEND_URL}/pages/auth/activate.html?uid={uidb64}&token={token}'
+    return f'{settings.FRONTEND_URL}/pages/auth/{page}?uid={uidb64}&token={token}'
 
 
-def send_activation_email(user):
+def send_html_email(subject, template, context, recipient):
     """Sends the mail as HTML with a plain-text fallback for clients without HTML."""
-    context = {'user': user, 'activation_link': build_activation_link(user)}
-    html_body = render_to_string('auth_app/activation_email.html', context)
+    html_body = render_to_string(template, context)
     message = EmailMultiAlternatives(
-        subject='Confirm your email',
-        body=f'Activate your account: {context["activation_link"]}',
-        to=[user.email],
+        subject=subject,
+        body=context['plain_text'],
+        to=[recipient],
     )
     message.attach_alternative(html_body, 'text/html')
     message.send()
+
+
+def send_activation_email(user):
+    """Asks the user to confirm the address before the locked account is opened."""
+    link = build_frontend_link(user, 'activate.html')
+    context = {'user': user, 'activation_link': link,
+               'plain_text': f'Activate your account: {link}'}
+    send_html_email('Confirm your email', 'auth_app/activation_email.html', context, user.email)
+
+
+def send_password_reset_email(user):
+    """Sends the reset link; the token dies on its own once the password changed."""
+    link = build_frontend_link(user, 'confirm_password.html')
+    context = {'user': user, 'reset_link': link,
+               'plain_text': f'Reset your password: {link}'}
+    send_html_email('Reset your Password', 'auth_app/password_reset_email.html',
+                    context, user.email)
 
 
 def get_user_from_uidb64(uidb64):
