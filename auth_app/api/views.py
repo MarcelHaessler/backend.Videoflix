@@ -82,7 +82,7 @@ class LogoutView(APIView):
     def post(self, request):
         """An expired token still logs the user out; only a missing cookie is an error."""
         raw_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
-        if raw_token is None:
+        if not raw_token:
             return Response(MISSING_REFRESH, status=status.HTTP_400_BAD_REQUEST)
         blacklist_refresh_token(raw_token)
         response = Response({'detail': LOGOUT_MESSAGE}, status=status.HTTP_200_OK)
@@ -98,7 +98,7 @@ class CookieTokenRefreshView(APIView):
     def post(self, request):
         """Reads the refresh token from the cookie, since the frontend cannot send a body."""
         raw_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
-        if raw_token is None:
+        if not raw_token:
             return Response(MISSING_REFRESH, status=status.HTTP_400_BAD_REQUEST)
         try:
             refresh = RefreshToken(raw_token)

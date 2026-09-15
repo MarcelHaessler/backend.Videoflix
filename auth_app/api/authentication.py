@@ -10,10 +10,10 @@ class CookieJWTAuthentication(JWTAuthentication):
     """
 
     def authenticate(self, request):
-        """Without a cookie this returns None; a present but invalid token raises 401."""
+        """An empty cookie counts as no cookie; only a filled invalid token raises 401."""
         cookie_name = settings.SIMPLE_JWT['AUTH_COOKIE_ACCESS']
         raw_token = request.COOKIES.get(cookie_name)
-        if raw_token is None:
+        if not raw_token:
             return None
         validated_token = self.get_validated_token(raw_token)
         return self.get_user(validated_token), validated_token
