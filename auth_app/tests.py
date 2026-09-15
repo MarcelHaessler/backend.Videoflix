@@ -183,3 +183,69 @@ class SessionTests(APITestCase):
         fresh.cookies['refresh_token'] = 'kaputt'
         response = fresh.post(reverse('token_refresh'))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+def confirm_url(user):
+    """The link from the reset mail, pointing at the backend route this time."""
+    uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    return reverse('password_confirm', args=[uidb64, token])
+
+
+class PasswordResetRequestTests(APITestCase):
+    """The request endpoint must not reveal which addresses are registered."""
+
+    def setUp(self):
+        """One existing account to contrast with an address nobody uses."""
+        self.url = reverse('password_reset')
+        self.user = create_user(email='bekannt@test.de')
+
+    def test_known_address_receives_mail(self):
+        """The happy path: status 200 and exactly one mail in the outbox."""
+        response = self.client.post(self.url, {'email': 'bekannt@test.de'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_unknown_address_looks_identical(self):
+        """Same status as for a known address, so nobody can probe for accounts."""
+        response = self.client.post(self.url, {'email': 'niemand@test.de'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class PasswordConfirmTests(APITestCase):
+    """Setting the new password, including the checks that protect the link."""
+
+    def setUp(self):
+        """A normal account plus the payload the reset form sends."""
+        self.user = create_user(email='reset@test.de')
+        self.payload = {'new_password': 'ganzneu123', 'confirm_password': 'ganzneu123'}
+
+    def test_password_is_changed(self):
+        """One call only: the second one would already run against a changed hash."""
+        response = self.client.post(confirm_url(self.user), self.payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('ganzneu123'))
+
+    def test_old_password_stops_working(self):
+        """Replacing the password has to invalidate the previous one."""
+        self.client.post(confirm_url(self.user), self.payload)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.check_password(TEST_PASSWORD))
+
+    def test_mismatched_passwords_are_rejected(self):
+        """A rejected form must leave the stored password untouched."""
+        self.payload['confirm_password'] = 'anders123'
+        response = self.client.post(confirm_url(self.user), self.payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(TEST_PASSWORD))
+
+    def test_link_works_only_once(self):
+        """set_password changes the hash, and the hash is part of the token."""
+        url = confirm_url(self.user)
+        first = self.client.post(url, self.payload)
+        second = self.client.post(url, self.payload)
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
