@@ -8,6 +8,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
+from auth_app.api.utils import blacklist_refresh_token
 from core.test_utils import TEST_PASSWORD, create_user
 
 
@@ -249,3 +250,12 @@ class PasswordConfirmTests(APITestCase):
         second = self.client.post(url, self.payload)
         self.assertEqual(first.status_code, status.HTTP_200_OK)
         self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class BlacklistHelperTests(APITestCase):
+    """The helper has to survive tokens that are already unusable."""
+
+    def test_broken_token_does_not_raise(self):
+        """Calling blacklist_refresh_token with a token that is already invalid must not raise."""
+
+        blacklist_refresh_token('kaputt')
