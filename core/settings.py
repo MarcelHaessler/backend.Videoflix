@@ -15,7 +15,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv(  # FIX: umgebrochen, die Zeile hatte 114 Zeichen
+SECRET_KEY = os.getenv(
     'SECRET_KEY',
     default='django-insecure-@#x5h3zj!g+8g1v@2^b6^9$8&f1r7g$@t3v!p4#=g0r5qzj4m3',
 )
@@ -23,7 +23,6 @@ SECRET_KEY = os.getenv(  # FIX: umgebrochen, die Zeile hatte 114 Zeichen
 DEBUG = os.environ.get('DEBUG', default='True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", default="localhost").split(",")
-# FIX: umgebrochen, die Zeile hatte 105 Zeichen
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS", default="http://localhost:4200"
 ).split(",")

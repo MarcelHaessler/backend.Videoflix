@@ -1,8 +1,8 @@
 """Database model for the movies that the dashboard offers."""
 from django.db import models
 
-# Die Kategorien gruppieren das Dashboard. Das Frontend kleinschreibt sie selbst,
-# deshalb steht links der gespeicherte Wert und rechts die Anzeige im Admin.
+# The dashboard groups by category. The frontend lowercases the value itself,
+# so the stored value is on the left and the admin label on the right.
 CATEGORY_CHOICES = [
     ('drama', 'Drama'),
     ('romance', 'Romance'),
@@ -26,4 +26,6 @@ class Video(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
+        """The title is what identifies an entry in the admin list."""
+
         return self.title

@@ -14,6 +14,8 @@ class VideoSerializer(serializers.ModelSerializer):
         fields = ['id', 'created_at', 'title', 'description', 'thumbnail_url', 'category']
 
     def get_thumbnail_url(self, obj):
+        """Absolute, because the frontend loads the image from another origin."""
+
         if not obj.thumbnail:
             return None
         request = self.context['request']

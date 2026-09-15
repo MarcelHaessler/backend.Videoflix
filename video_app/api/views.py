@@ -23,6 +23,7 @@ class HLSPlaylistView(APIView):
 
     def get(self, request, movie_id, resolution):
         """The player reads this file first and then requests the segments itself."""
+
         path = checked_hls_file(movie_id, resolution, 'index.m3u8')
         if path is None:
             raise Http404
@@ -34,6 +35,7 @@ class HLSSegmentView(APIView):
 
     def get(self, request, movie_id, resolution, segment):
         """Same pattern as the playlist, only with the segment name from the URL."""
+
         path = checked_hls_file(movie_id, resolution, segment)
         if path is None:
             raise Http404

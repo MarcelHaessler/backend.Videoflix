@@ -21,9 +21,11 @@ def checked_hls_file(movie_id, resolution, filename):
 
 def filename_is_invalid(filename):
     """A name that does not match the pattern cannot contain a path at all."""
+
     return ALLOWED_FILE.match(filename) is None
 
 
 def resolution_is_invalid(resolution):
     """Only the three qualities the frontend offers are served."""
+
     return resolution not in [f'{value}p' for value in RESOLUTIONS]

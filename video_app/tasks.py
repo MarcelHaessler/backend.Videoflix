@@ -10,6 +10,7 @@ from .utils import (RESOLUTIONS, build_hls_command, build_thumbnail_command, hls
 
 def convert_video(video_id):
     """Queue entry point. Takes the id, not the object, because jobs are serialised."""
+
     video = Video.objects.get(pk=video_id)
     source = Path(video.video_file.path)
     for resolution in RESOLUTIONS:
@@ -19,6 +20,7 @@ def convert_video(video_id):
 
 def create_rendition(source, video_id, resolution):
     """One quality level; the folder has to exist before ffmpeg writes into it."""
+
     target_dir = hls_directory(video_id, resolution)
     target_dir.mkdir(parents=True, exist_ok=True)
     run_ffmpeg(build_hls_command(source, target_dir, resolution))
@@ -26,6 +28,7 @@ def create_rendition(source, video_id, resolution):
 
 def create_thumbnail(video, source):
     """Writes the frame and stores its relative path, which the API turns into a URL."""
+
     target = Path(settings.MEDIA_ROOT) / 'thumbnails' / f'{video.id}.jpg'
     target.parent.mkdir(parents=True, exist_ok=True)
     run_ffmpeg(build_thumbnail_command(source, target))

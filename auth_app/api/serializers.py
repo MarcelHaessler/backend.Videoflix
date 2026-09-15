@@ -3,7 +3,6 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-
 GENERIC_ERROR = 'Please check your input and try again.'
 
 
@@ -22,18 +21,21 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         """Django allows duplicate emails, so the uniqueness check has to happen here."""
+
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError(GENERIC_ERROR)
         return value
 
     def validate(self, attrs):
         """Compares both password fields before any user is written to the database."""
+
         if attrs['password'] != attrs['confirmed_password']:
             raise serializers.ValidationError(GENERIC_ERROR)
         return attrs
 
     def create(self, validated_data):
         """Stores the email as username too, because the login form has no username."""
+
         user = User.objects.create_user(
             username=validated_data['email'],
             email=validated_data['email'],
@@ -51,6 +53,7 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         """One shared message covers wrong credentials and accounts that are not active."""
+
         user = authenticate(username=attrs['email'], password=attrs['password'])
         if user is None:
             raise serializers.ValidationError(GENERIC_ERROR)
@@ -71,6 +74,8 @@ class PasswordConfirmSerializer(serializers.Serializer):
     confirm_password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
+        """Both fields have to match before the old password is replaced."""
+
         if attrs['new_password'] != attrs['confirm_password']:
             raise serializers.ValidationError(GENERIC_ERROR)
         return attrs

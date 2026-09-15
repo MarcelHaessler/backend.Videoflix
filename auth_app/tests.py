@@ -17,6 +17,7 @@ class RegistrationTests(APITestCase):
 
     def setUp(self):
         """Runs before every single test, so each one starts from the same state."""
+
         self.url = reverse('register')
         self.payload = {
             'email': 'neu@test.de',
@@ -26,6 +27,7 @@ class RegistrationTests(APITestCase):
 
     def test_registration_creates_inactive_user(self):
         """The account must exist but stay locked until the mail link is used."""
+
         response = self.client.post(self.url, self.payload)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         user = User.objects.get(email='neu@test.de')
@@ -39,7 +41,7 @@ class RegistrationTests(APITestCase):
         self.assertEqual(mail.outbox[0].to, ['neu@test.de'])
 
     def test_registration_rejects_duplicate_email(self):
-        """Django allows duplicate emails, so the uniqueness check has to happen here."""
+        """A second sign-up with a known address must not create another account."""
 
         create_user(email='neu@test.de')
         response = self.client.post(self.url, self.payload)
@@ -56,6 +58,7 @@ class RegistrationTests(APITestCase):
 
 def activation_url(user):
     """Builds the same link the activation mail contains, but as a backend route."""
+
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     return reverse('activate', args=[uidb64, token])
@@ -66,10 +69,12 @@ class ActivationTests(APITestCase):
 
     def setUp(self):
         """Every test starts with a locked account, as registration leaves it."""
+
         self.user = create_user(email='locked@test.de', is_active=False)
 
     def test_valid_link_activates_account(self):
         """After the call the flag in the database has to be True."""
+
         response = self.client.get(activation_url(self.user))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
@@ -109,12 +114,14 @@ class LoginTests(APITestCase):
 
     def setUp(self):
         """An activated account, because a locked one can never log in."""
+
         self.url = reverse('login')
         self.user = create_user(email='aktiv@test.de')
         self.credentials = {'email': 'aktiv@test.de', 'password': TEST_PASSWORD}
 
     def test_login_sets_both_cookies(self):
         """The frontend never sees the tokens, so they have to arrive as cookies."""
+
         response = self.client.post(self.url, self.credentials)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access_token', response.cookies)
@@ -147,12 +154,14 @@ class SessionTests(APITestCase):
 
     def setUp(self):
         """Logging in first, because the test client keeps the cookies afterwards."""
+
         self.user = create_user(email='session@test.de')
         self.client.post(reverse('login'), {'email': 'session@test.de',
                                             'password': TEST_PASSWORD})
 
     def test_logout_clears_cookies(self):
         """An empty cookie value is how the browser is told to drop it."""
+
         response = self.client.post(reverse('logout'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.cookies['access_token'].value, '')
@@ -174,12 +183,13 @@ class SessionTests(APITestCase):
     def test_logout_without_cookie_is_bad_request(self):
         """The refresh token is missing, so the call ends in 400 Bad Request."""
 
-        fresh = APIClient()  # ein Client ganz ohne Cookies
+        fresh = APIClient()
         response = fresh.post(reverse('logout'))
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_refresh_with_broken_cookie_is_unauthorized(self):
         """A token that is present but unusable is 401, unlike a missing one, which is 400."""
+
         fresh = APIClient()
         fresh.cookies['refresh_token'] = 'kaputt'
         response = fresh.post(reverse('token_refresh'))
@@ -188,6 +198,7 @@ class SessionTests(APITestCase):
 
 def confirm_url(user):
     """The link from the reset mail, pointing at the backend route this time."""
+
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     return reverse('password_confirm', args=[uidb64, token])
@@ -198,17 +209,20 @@ class PasswordResetRequestTests(APITestCase):
 
     def setUp(self):
         """One existing account to contrast with an address nobody uses."""
+
         self.url = reverse('password_reset')
         self.user = create_user(email='bekannt@test.de')
 
     def test_known_address_receives_mail(self):
         """The happy path: status 200 and exactly one mail in the outbox."""
+
         response = self.client.post(self.url, {'email': 'bekannt@test.de'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 1)
 
     def test_unknown_address_looks_identical(self):
         """Same status as for a known address, so nobody can probe for accounts."""
+
         response = self.client.post(self.url, {'email': 'niemand@test.de'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 0)
@@ -219,11 +233,13 @@ class PasswordConfirmTests(APITestCase):
 
     def setUp(self):
         """A normal account plus the payload the reset form sends."""
+
         self.user = create_user(email='reset@test.de')
         self.payload = {'new_password': 'ganzneu123', 'confirm_password': 'ganzneu123'}
 
     def test_password_is_changed(self):
         """One call only: the second one would already run against a changed hash."""
+
         response = self.client.post(confirm_url(self.user), self.payload)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
@@ -231,12 +247,14 @@ class PasswordConfirmTests(APITestCase):
 
     def test_old_password_stops_working(self):
         """Replacing the password has to invalidate the previous one."""
+
         self.client.post(confirm_url(self.user), self.payload)
         self.user.refresh_from_db()
         self.assertFalse(self.user.check_password(TEST_PASSWORD))
 
     def test_mismatched_passwords_are_rejected(self):
         """A rejected form must leave the stored password untouched."""
+
         self.payload['confirm_password'] = 'anders123'
         response = self.client.post(confirm_url(self.user), self.payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -245,6 +263,7 @@ class PasswordConfirmTests(APITestCase):
 
     def test_link_works_only_once(self):
         """set_password changes the hash, and the hash is part of the token."""
+
         url = confirm_url(self.user)
         first = self.client.post(url, self.payload)
         second = self.client.post(url, self.payload)

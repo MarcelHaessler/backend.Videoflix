@@ -9,8 +9,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import (LoginSerializer, PasswordConfirmSerializer,
-                          PasswordResetSerializer, RegistrationSerializer)
+from .serializers import (LoginSerializer, PasswordConfirmSerializer, PasswordResetSerializer,
+                          RegistrationSerializer)
 from .utils import (blacklist_refresh_token, delete_auth_cookies, get_user_from_uidb64,
                     send_activation_email, send_password_reset_email, set_access_cookie,
                     set_auth_cookies)
@@ -30,6 +30,7 @@ class RegistrationView(APIView):
 
     def post(self, request):
         """The returned token is informational only; the frontend uses the mailed link."""
+
         serializer = RegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -47,6 +48,7 @@ class ActivationView(APIView):
 
     def get(self, request, uidb64, token):
         """A tampered link or a token that no longer matches the user ends in 400."""
+
         user = get_user_from_uidb64(uidb64)
         if user is None or not default_token_generator.check_token(user, token):
             return Response({'message': 'Activation failed.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -62,6 +64,7 @@ class LoginView(APIView):
 
     def post(self, request):
         """The response is built first, because both cookies are attached to it afterwards."""
+
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
@@ -81,6 +84,7 @@ class LogoutView(APIView):
 
     def post(self, request):
         """An expired token still logs the user out; only a missing cookie is an error."""
+
         raw_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
         if not raw_token:
             return Response(MISSING_REFRESH, status=status.HTTP_400_BAD_REQUEST)
@@ -97,6 +101,7 @@ class CookieTokenRefreshView(APIView):
 
     def post(self, request):
         """Reads the refresh token from the cookie, since the frontend cannot send a body."""
+
         raw_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
         if not raw_token:
             return Response(MISSING_REFRESH, status=status.HTTP_400_BAD_REQUEST)
@@ -118,6 +123,7 @@ class PasswordResetView(APIView):
 
     def post(self, request):
         """Always answers 200, otherwise the endpoint would reveal registered addresses."""
+
         serializer = PasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = User.objects.filter(email=serializer.validated_data['email']).first()
@@ -133,6 +139,7 @@ class PasswordConfirmView(APIView):
 
     def post(self, request, uidb64, token):
         """Same link check as the activation; a used or tampered link ends in 400."""
+
         serializer = PasswordConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = get_user_from_uidb64(uidb64)

@@ -21,5 +21,3 @@ htmlcov/
 .vscode/
 .idea/
 
-# Local editor/preview config
-.claude/

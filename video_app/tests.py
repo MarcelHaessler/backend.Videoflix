@@ -20,11 +20,13 @@ MEDIA_FOR_TESTS = tempfile.mkdtemp()
 
 def tearDownModule():
     """Removes the throwaway media folder once every test in this file has run."""
+
     shutil.rmtree(MEDIA_FOR_TESTS, ignore_errors=True)
 
 
 def create_video(title='Testfilm', category='drama'):
     """A catalogue entry with a fake upload; nothing here is a real movie file."""
+
     return Video.objects.create(
         title=title,
         description='Eine Beschreibung.',
@@ -44,6 +46,7 @@ class QueueFreeTestCase(APITestCase):
 
     def setUp(self):
         """addCleanup stops the patch again, even if the test fails midway."""
+
         patcher = patch('video_app.signals.django_rq.get_queue')
         self.queue = patcher.start()
         self.addCleanup(patcher.stop)
@@ -55,6 +58,7 @@ class VideoModelTests(QueueFreeTestCase):
 
     def test_str_returns_title(self):
         """__str__ shows up in the admin list, so it has to be the title."""
+
         video = create_video(title='Gardasee')
         self.assertEqual(str(video), 'Gardasee')
 
@@ -72,17 +76,19 @@ class VideoListTests(QueueFreeTestCase):
 
     def setUp(self):
         """One entry plus a logged in client, as the dashboard would have it."""
+
         super().setUp()
         self.video = create_video()
         self.url = reverse('video-list')
 
     def test_list_requires_login(self):
         """A fresh client has no cookie, so the list must answer 401."""
+
         response = APIClient().get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_list_returns_entry(self):
-        """The dashboard shows the title, description, category and thumbnail URL."""
+        """A logged in client sees every catalogue entry."""
 
         response = auth_client().get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -112,6 +118,7 @@ class HLSDeliveryTests(QueueFreeTestCase):
 
     def setUp(self):
         """Writes a fake playlist and a fake segment where the views look for them."""
+
         super().setUp()
         self.video = create_video()
         self.client = auth_client()
@@ -122,13 +129,14 @@ class HLSDeliveryTests(QueueFreeTestCase):
 
     def test_playlist_is_delivered(self):
         """The player fetches this file first, so it has to arrive as a whole."""
+
         url = reverse('hls-playlist', args=[self.video.id, '480p'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(b''.join(response.streaming_content), b'#EXTM3U')
 
     def test_segment_is_delivered(self):
-        """The player fetches this file next, so it has to arrive as a whole."""
+        """Segments carry the actual video data and are requested one after another."""
 
         url = reverse('hls-segment', args=[self.video.id, '480p', '000.ts'])
         response = self.client.get(url)
@@ -151,7 +159,7 @@ class HLSDeliveryTests(QueueFreeTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_playlist_requires_login(self):
-        """The player has no cookie, so the list must answer 401."""
+        """Without a session the playlist stays closed, just like the catalogue."""
 
         response = APIClient().get(reverse('hls-playlist', args=[self.video.id, '480p']))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -168,6 +176,7 @@ class ConversionTests(QueueFreeTestCase):
 
     def setUp(self):
         """One entry to convert, plus a patch that swallows every ffmpeg call."""
+
         super().setUp()
         self.video = create_video()
         patcher = patch('video_app.tasks.run_ffmpeg')
@@ -176,6 +185,7 @@ class ConversionTests(QueueFreeTestCase):
 
     def test_every_resolution_is_encoded(self):
         """Three qualities plus one thumbnail means four calls, not three."""
+
         convert_video(self.video.id)
         self.assertEqual(self.ffmpeg.call_count, 4)
 
@@ -216,6 +226,7 @@ class SignalTests(QueueFreeTestCase):
 
     def test_new_upload_is_queued(self):
         """Uploading has to trigger exactly one job."""
+
         create_video()
         self.queue.return_value.enqueue.assert_called_once()
 

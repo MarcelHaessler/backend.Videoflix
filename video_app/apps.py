@@ -10,4 +10,5 @@ class VideoAppConfig(AppConfig):
 
     def ready(self):
         """Importing the module is what actually connects the post_save receiver."""
+
         from . import signals  # noqa: F401
