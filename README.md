@@ -91,18 +91,35 @@ The startup script waits for PostgreSQL, applies all migrations, creates the
 superuser from the `DJANGO_SUPERUSER_*` variables and starts both the RQ worker
 and Gunicorn.
 
-### Mails during development
+### Mails
 
-`.env.template` sets `EMAIL_BACKEND` to Django's console backend. Activation and
-reset mails are printed to the container log instead of being sent, which keeps
-the setup working without an SMTP account:
+Out of the box `.env.template` sets `EMAIL_BACKEND` to Django's console backend.
+Activation and reset mails are then printed to the container log instead of
+being sent, so registration works without an SMTP account. The activation link
+is in that output:
 
 ```bash
 docker compose logs web
 ```
 
-To send real mails, remove that line from `.env` and fill in the `EMAIL_HOST`,
-`EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD` variables.
+To send real mails instead, edit `.env` as follows.
+
+1. Delete the line `EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend`.
+   Without it Django uses SMTP.
+2. Set `EMAIL_HOST` to your provider's SMTP server and `EMAIL_PORT` to its port,
+   587 with `EMAIL_USE_TLS=True` for most providers.
+3. Set `EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD` to your mailbox credentials.
+   Many providers expect a separate app password here, not the one you log in
+   with.
+4. `DEFAULT_FROM_EMAIL` stays empty unless you want a sender that differs from
+   `EMAIL_HOST_USER`. An empty value, or anything that is not an address, falls
+   back to `EMAIL_HOST_USER`.
+
+Restart afterwards so the container picks up the new values:
+
+```bash
+docker compose restart web
+```
 
 ## Environment variables
 
@@ -122,7 +139,7 @@ To send real mails, remove that line from `.env` and fill in the `EMAIL_HOST`,
 | `EMAIL_BACKEND` | Console backend for development, SMTP otherwise | console |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP settings | see template |
 | `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | Transport encryption | `True`, `False` |
-| `DEFAULT_FROM_EMAIL` | Sender address of the mails | `EMAIL_HOST_USER` |
+| `DEFAULT_FROM_EMAIL` | Sender of the mails; empty or a placeholder falls back to `EMAIL_HOST_USER` | empty |
 | `AUTH_COOKIE_SECURE` | Set to `True` when serving over HTTPS | `False` |
 | `AUTH_COOKIE_SAMESITE` | SameSite policy of the JWT cookies | `Lax` |
 
@@ -229,7 +246,7 @@ Check the code style:
 docker compose exec web flake8 auth_app/ video_app/ core/
 ```
 
-The suite contains 42 tests and covers 99 percent of the project. ffmpeg is
+The suite contains 46 tests and covers 99 percent of the project. ffmpeg is
 replaced by a mock during the tests, so no encoding happens and the suite
 finishes in a few seconds.
 

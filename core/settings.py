@@ -11,6 +11,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from core.env_utils import pick_sender_address
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -153,7 +155,9 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", default="True") == "True"
 EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", default="False") == "True"
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = pick_sender_address(
+    os.environ.get("DEFAULT_FROM_EMAIL", default=""), EMAIL_HOST_USER
+)
 
 
 # Password validation
