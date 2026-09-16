@@ -12,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import (LoginSerializer, PasswordConfirmSerializer, PasswordResetSerializer,
                           RegistrationSerializer)
 from .utils import (blacklist_refresh_token, delete_auth_cookies, get_user_from_uidb64,
-                    send_activation_email, send_password_reset_email, set_access_cookie,
+                    send_activation_email, send_password_reset_email, set_auth_cookie,
                     set_auth_cookies)
 
 LOGOUT_MESSAGE = ('Logout successful! All tokens will be deleted. '
@@ -112,7 +112,7 @@ class CookieTokenRefreshView(APIView):
         access = refresh.access_token
         payload = {'detail': 'Token refreshed', 'access': str(access)}
         response = Response(payload, status=status.HTTP_200_OK)
-        set_access_cookie(response, access)
+        set_auth_cookie(response, settings.SIMPLE_JWT['AUTH_COOKIE_ACCESS'], access)
         return response
 
 

@@ -246,7 +246,7 @@ Check the code style:
 docker compose exec web flake8 auth_app/ video_app/ core/
 ```
 
-The suite contains 46 tests and covers 99 percent of the project. ffmpeg is
+The suite contains 49 tests and covers 99 percent of the project. ffmpeg is
 replaced by a mock during the tests, so no encoding happens and the suite
 finishes in a few seconds.
 

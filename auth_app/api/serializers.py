@@ -2,6 +2,7 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 
 GENERIC_ERROR = 'Please check your input and try again.'
 
@@ -56,7 +57,7 @@ class LoginSerializer(serializers.Serializer):
 
         user = authenticate(username=attrs['email'], password=attrs['password'])
         if user is None:
-            raise serializers.ValidationError(GENERIC_ERROR)
+            raise AuthenticationFailed(GENERIC_ERROR)
         attrs['user'] = user
         return attrs
 

@@ -60,24 +60,12 @@ def get_user_from_uidb64(uidb64):
         return None
 
 
-def set_access_cookie(response, access_token):
-    """Store the access token as an HttpOnly cookie (never readable by JavaScript)."""
+def set_auth_cookie(response, name, token):
+    """HttpOnly keeps the value away from JavaScript, which is the whole point."""
 
     response.set_cookie(
-        key=settings.SIMPLE_JWT['AUTH_COOKIE_ACCESS'],
-        value=str(access_token),
-        httponly=True,
-        secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
-        samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
-    )
-
-
-def set_refresh_cookie(response, refresh_token):
-    """Store the refresh token, which is only ever sent back to the auth endpoints."""
-
-    response.set_cookie(
-        key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
-        value=str(refresh_token),
+        key=name,
+        value=str(token),
         httponly=True,
         secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
         samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE'],
@@ -87,8 +75,8 @@ def set_refresh_cookie(response, refresh_token):
 def set_auth_cookies(response, access_token, refresh_token):
     """Attach both JWT cookies to a login response."""
 
-    set_access_cookie(response, access_token)
-    set_refresh_cookie(response, refresh_token)
+    set_auth_cookie(response, settings.SIMPLE_JWT['AUTH_COOKIE_ACCESS'], access_token)
+    set_auth_cookie(response, settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'], refresh_token)
 
 
 def delete_auth_cookies(response):

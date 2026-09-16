@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+from django.contrib.admin.sites import site
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
@@ -11,6 +12,7 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from core.test_utils import auth_client
+from video_app.admin import VideoAdmin
 from video_app.models import Video
 from video_app.tasks import convert_video
 from video_app.utils import build_hls_command, hls_directory, run_ffmpeg, scale_filter
@@ -225,9 +227,10 @@ class SignalTests(QueueFreeTestCase):
     """The signal decides when a job is queued, and just as importantly when not."""
 
     def test_new_upload_is_queued(self):
-        """Uploading has to trigger exactly one job."""
+        """captureOnCommitCallbacks runs what on_commit deferred; a test never commits."""
 
-        create_video()
+        with self.captureOnCommitCallbacks(execute=True):
+            create_video()
         self.queue.return_value.enqueue.assert_called_once()
 
     def test_editing_does_not_requeue(self):
@@ -235,6 +238,33 @@ class SignalTests(QueueFreeTestCase):
 
         video = create_video()
         self.queue.reset_mock()
-        video.title = 'Neuer Titel'
-        video.save()
+        with self.captureOnCommitCallbacks(execute=True):
+            video.title = 'Neuer Titel'
+            video.save()
         self.queue.return_value.enqueue.assert_not_called()
+
+
+@override_settings(MEDIA_ROOT=MEDIA_FOR_TESTS)
+class OptionalDescriptionTests(QueueFreeTestCase):
+    """Only title, category and the video file are mandatory."""
+
+    def test_video_without_description_can_be_saved(self):
+        """An entry created without a description keeps an empty string, never None."""
+
+        video = Video.objects.create(
+            title='Ohne Text',
+            category='drama',
+            video_file=SimpleUploadedFile('film.mp4', b'keine echten videodaten'),
+        )
+        self.assertEqual(video.description, '')
+
+    def test_admin_form_accepts_an_empty_description(self):
+        """blank=True is what lets the admin form submit the field empty."""
+
+        form = VideoAdmin(Video, site).get_form(None)(data={
+            'title': 'Ohne Text',
+            'category': 'drama',
+            'description': '',
+        })
+        form.is_valid()
+        self.assertNotIn('description', form.errors)

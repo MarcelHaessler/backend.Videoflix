@@ -134,19 +134,19 @@ class LoginTests(APITestCase):
         self.assertTrue(response.cookies['access_token']['httponly'])
 
     def test_wrong_password_is_rejected(self):
-        """The error message is the same as for inactive accounts, so no hints are given."""
+        """Wrong credentials are 401: the request was fine, the login was not."""
 
         self.credentials['password'] = 'falsch123'
         response = self.client.post(self.url, self.credentials)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_inactive_user_cannot_log_in(self):
-        """The error message is the same as for wrong passwords, so no hints are given."""
+        """A locked account looks exactly like a wrong password from the outside."""
 
         create_user(email='gesperrt@test.de', is_active=False)
         response = self.client.post(self.url, {'email': 'gesperrt@test.de',
                                                'password': TEST_PASSWORD})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class SessionTests(APITestCase):
@@ -278,3 +278,13 @@ class BlacklistHelperTests(APITestCase):
         """Calling blacklist_refresh_token with a token that is already invalid must not raise."""
 
         blacklist_refresh_token('kaputt')
+
+
+class LoginRequestShapeTests(APITestCase):
+    """A malformed request stays a 400; only the credentials themselves give 401."""
+
+    def test_missing_password_is_bad_request(self):
+        """Nothing to check against means the request itself is incomplete."""
+
+        response = self.client.post(reverse('login'), {'email': 'wer@test.de'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

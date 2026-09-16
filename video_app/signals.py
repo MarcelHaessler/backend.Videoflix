@@ -1,5 +1,6 @@
 """Connects the upload in the admin with the conversion in the background."""
 import django_rq
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -14,4 +15,9 @@ def enqueue_conversion(sender, instance, created, **kwargs):
     if not created:
         return
 
-    django_rq.get_queue('default').enqueue(convert_video, instance.id)
+    # post_save runs inside the open transaction. The worker is a separate
+    # process with its own connection, so it could look for a row that is not
+    # committed yet. on_commit delays the job until the write is really done.
+    transaction.on_commit(
+        lambda: django_rq.get_queue('default').enqueue(convert_video, instance.id)
+    )
